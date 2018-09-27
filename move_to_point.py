@@ -116,7 +116,6 @@ def plot(x,y, start, goal):
 
     start_arrow = Arrow(start.x, start.y, 10*np.cos(start.theta), 10*np.sin(start.theta), 2.0)
     goal_arrow = Arrow(goal.x, goal.y, 10*np.cos(goal.theta), 10*np.sin(goal.theta), 2.0)
-
     ax.add_collection(PatchCollection([start_arrow, goal_arrow]))
 
 def do_move_to_point():
