@@ -79,22 +79,128 @@ class DifferentialDriveRobot(object):
 
         return x_plot, y_plot, theta_plot
 
+    def move_to_pose_old(self, goal_pose, k_rho, k_beta, k_alpha):
+        time_delta = .1
+        x_plot = []
+        y_plot = []
+        theta_plot = []
+        # k_alpha = 8.0
+        # k_beta  = -3.0
+        # k_rho   = 3.0
+        half_pi = np.pi / 2.0
+        v_sign = None
+        
+        rho = np.sqrt((self.pose.x - goal_pose.x)**2 + (self.pose.y - goal_pose.y)**2)
+        alpha = -self.pose.theta + np.arctan2(self.pose.y - goal_pose.y, self.pose.x - goal_pose.x)
+        beta  = -self.pose.theta - alpha
+
+        while True:
+            pose = self.pose
+            x_plot.append(pose.x)
+            y_plot.append(pose.y)
+            theta_plot.append(pose.theta)
+
+            distance = dist(pose.x, pose.y, goal_pose.x, goal_pose.y)
+            if distance < 1.0 or len(x_plot) > 10:
+#            if rho < 1.0 or len(x_plot) > 100:
+                break
+
+            v = k_rho * rho
+            if not v_sign:
+                v_sign = -1.0 if v < 0 else 1.0
+            elif v < 0 and v_sign >= 0 or v >= 0 and v_sign < 0:
+                v *= -1.0
+                
+            omega = k_alpha * alpha + k_beta * beta
+
+            self.pose = Pose(pose.x + time_delta * v * np.cos(pose.theta), pose.y + time_delta * v * np.sin(pose.theta), pose.theta + time_delta * omega )
+
+            # if -half_pi < alpha <= half_pi:
+            #     delta_rho   = -np.cos(alpha) * v
+            #     delta_alpha =  np.sin(alpha)/rho*v - omega
+            #     delta_beta  = -np.sin(alpha)/rho*v
+            # else:
+            #     delta_rho   =  np.cos(alpha) * v
+            #     delta_alpha = -np.sin(alpha)/rho*v + omega
+            #     delta_beta  =  np.sin(alpha)/rho*v
+
+            delta_rho   = -k_rho * rho * np.cos(alpha)
+            delta_alpha =  k_rho * np.sin(alpha) - k_alpha * alpha - k_beta * beta
+            delta_beta  = -k_rho * np.sin(alpha)
+
+            rho   += delta_rho
+            alpha += delta_alpha
+            beta  += delta_beta
+            print("x={:<6.4} y={:<6.4} theta={:<6.4} v={:<6.4} omega={:<6.4} rho={:<6.4} alpha={:<6.4} beta={:<6.4}".format(pose.x,pose.y, pose.theta, v, omega, rho, alpha, beta))
+
+        return x_plot, y_plot, theta_plot
+
+    def move_to_pose(self, goal_pose, k_rho, k_beta, k_alpha):
+        def to_polar(pose, goal_pose):
+            rho = np.sqrt((pose.x - goal_pose.x)**2 + (pose.y - goal_pose.y)**2)
+            alpha = -pose.theta + np.arctan2(goal_pose.y - pose.y, goal_pose.x - pose.x)
+            beta  = -pose.theta - alpha
+            return rho, alpha, beta
+
+        time_delta = .1
+        x_plot = []
+        y_plot = []
+        theta_plot = []
+        half_pi = np.pi / 2.0
+        v_sign = None
+        
+        rho, alpha, beta = to_polar(self.pose, goal_pose)
+
+        v_sign = -1
+        if -half_pi < alpha <= half_pi:
+            v_sign = 1
+
+        while True:
+            x_plot.append(self.pose.x)
+            y_plot.append(self.pose.y)
+            theta_plot.append(self.pose.theta)
+
+            distance = dist(self.pose.x, self.pose.y, goal_pose.x, goal_pose.y)
+            v = k_rho * rho * v_sign
+            omega = (k_alpha * alpha + k_beta * beta)
+
+            print("x={:<6.4} y={:<6.4} theta={:<6.4} distance={:<6.4} v={:<6.4} omega={:<6.4} rho={:<6.4} alpha={:<6.4} beta={:<6.4}".format(
+                self.pose.x,self.pose.y, self.pose.theta, distance, v, omega, rho, alpha, beta))
+
+            if rho < 0.01 or len(x_plot) > 100:
+                break
+
+            new_theta = self.pose.theta + time_delta * omega
+            self.pose = Pose(self.pose.x + v_sign * time_delta * v * np.cos(new_theta),
+                             self.pose.y + v_sign * time_delta * v * np.sin(new_theta),
+                             new_theta
+                             )
+
+            rho, alpha, beta = to_polar(self.pose, goal_pose)
+
+        return x_plot, y_plot, theta_plot
+
+
 max_x = -np.inf
 max_y = -np.inf
 min_x = np.inf
 min_y = np.inf
 fig, ax = plt.subplots()
 
-def plot(x,y, start, goal):
+def plot(x,y, start=None, goal=None, theta=None):
     global max_x
     global max_y
     global min_x
     global min_y
 
-    x.append(start.x)
-    x.append(goal.x)
-    y.append(start.y)
-    y.append(goal.y)
+
+    if start:
+        x.append(start.x)
+        x.append(goal.x)
+
+    if goal:
+        y.append(start.y)
+        y.append(goal.y)
 
     max_x = max(max(x), max_x)
     max_y = max(max(y), max_y)
@@ -114,10 +220,15 @@ def plot(x,y, start, goal):
     ax.set_ylim(min_y - 20, min_y + rng + 20)
     ax.set_aspect('equal', 'datalim')
 
-    start_arrow = Arrow(start.x, start.y, 10*np.cos(start.theta), 10*np.sin(start.theta), 2.0)
-    goal_arrow = Arrow(goal.x, goal.y, 10*np.cos(goal.theta), 10*np.sin(goal.theta), 2.0)
-    ax.add_collection(PatchCollection([start_arrow, goal_arrow]))
-
+    if start:
+        start_arrow = Arrow(start.x, start.y, 10*np.cos(start.theta), 10*np.sin(start.theta), 2.0)
+        ax.add_collection(PatchCollection([start_arrow]))
+    if goal:
+        goal_arrow = Arrow(goal.x, goal.y, 10*np.cos(goal.theta), 10*np.sin(goal.theta), 2.0)
+        ax.add_collection(PatchCollection([goal_arrow]))
+    if theta:
+        ax.add_collection(PatchCollection([Arrow(x, y, 5*np.cos(theta), 3*np.sin(theta), 1.0) for x, y, theta in zip(x, y, theta)]))
+                              
 def do_move_to_point():
     x_g = 0.0
     y_g = 0.0
@@ -144,7 +255,6 @@ def do_move_to_line():
     c = 0.0
     l = (-a, b, -c)
 
-#    pdb.set_trace()
     plt.scatter([i for i in range(50)], [a * i + c for i in range(50)])
 
     for initial_pose in [
@@ -169,8 +279,28 @@ def do_move_to_line():
     plt.savefig('a3_move_line.png')
     plt.show()
 
+def do_move_to_pose():
+    goal_pose = Pose(20.0, 20.0, deg2rad(90.0))
+    k_r = 3
+    k_a = 8
+    k_b = -3
+    for x,y,theta in [
+                    # (15.0,  5.0, deg2rad(0.0)),
+                     (50.0,  5.0, deg2rad(0.0)),
+                    # (10.0,  30.0, deg2rad(180.0)),
+            ]:
+        initial_pose = Pose(x,y,theta)
+        robot = DifferentialDriveRobot(pose=initial_pose)
+        x,y, theta = robot.move_to_pose(goal_pose, k_r, k_b, k_a)
+        plot(x, y, theta=theta)
+
+
+    plt.savefig('a3_move_to_pose.png')
+    plt.show()
+
+
 def main():
-    do_move_to_line()
+    do_move_to_pose()
 
 if __name__=="__main__":
     main()
