@@ -75,14 +75,14 @@ def main():
             y_ind = int(robot_y[-1])
             robot_x.append(robot_x[-1] + dx[x_ind][y_ind])
             robot_y.append(robot_y[-1] + dy[x_ind][y_ind])
-        ax.scatter(robot_x, robot_y, s=1.0, c=c)
+        ax.scatter(robot_x, robot_y, s=2.0, c=c)
 
     cell_diagonal = np.sqrt(2.0) / 2.0
     offsets = (cell_diagonal-vector_lengths/2.0) * .5
     arrows = []
     for i in range(100):
         for j in range(100):
-            arrows.append(Arrow(i + offsets[i][j], j + offsets[i][j], dx[i][j], dy[i][j], vector_lengths[i][j]))
+            arrows.append(Arrow(i + offsets[i][j], j + offsets[i][j], dx[i][j], dy[i][j], vector_lengths[i][j], width=.00001))
     ax.add_collection(PatchCollection(arrows))
     ax.set_aspect('equal', 'datalim')
     # ax.quiver(x_ind, y_ind, dx, dy, scale=100)
@@ -90,6 +90,7 @@ def main():
     plt.xlim((-10, 110))
 
 
+    plt.savefig('a3_field_potential.png', dpi=600)
     plt.show()
     return
 

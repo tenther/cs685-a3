@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 from collections import namedtuple
+from itertools import islice
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arrow, Circle
 from matplotlib.collections import PatchCollection
 import numpy as np
 import pdb
+import sys
 
 # Computer Science 685 Assignment 3
 # Paul McKerley (G00616949)
@@ -79,62 +81,6 @@ class DifferentialDriveRobot(object):
 
         return x_plot, y_plot, theta_plot
 
-    def move_to_pose_old(self, goal_pose, k_rho, k_beta, k_alpha):
-        time_delta = .1
-        x_plot = []
-        y_plot = []
-        theta_plot = []
-        # k_alpha = 8.0
-        # k_beta  = -3.0
-        # k_rho   = 3.0
-        half_pi = np.pi / 2.0
-        v_sign = None
-        
-        rho = np.sqrt((self.pose.x - goal_pose.x)**2 + (self.pose.y - goal_pose.y)**2)
-        alpha = -self.pose.theta + np.arctan2(self.pose.y - goal_pose.y, self.pose.x - goal_pose.x)
-        beta  = -self.pose.theta - alpha
-
-        while True:
-            pose = self.pose
-            x_plot.append(pose.x)
-            y_plot.append(pose.y)
-            theta_plot.append(pose.theta)
-
-            distance = dist(pose.x, pose.y, goal_pose.x, goal_pose.y)
-            if distance < 1.0 or len(x_plot) > 10:
-#            if rho < 1.0 or len(x_plot) > 100:
-                break
-
-            v = k_rho * rho
-            if not v_sign:
-                v_sign = -1.0 if v < 0 else 1.0
-            elif v < 0 and v_sign >= 0 or v >= 0 and v_sign < 0:
-                v *= -1.0
-                
-            omega = k_alpha * alpha + k_beta * beta
-
-            self.pose = Pose(pose.x + time_delta * v * np.cos(pose.theta), pose.y + time_delta * v * np.sin(pose.theta), pose.theta + time_delta * omega )
-
-            # if -half_pi < alpha <= half_pi:
-            #     delta_rho   = -np.cos(alpha) * v
-            #     delta_alpha =  np.sin(alpha)/rho*v - omega
-            #     delta_beta  = -np.sin(alpha)/rho*v
-            # else:
-            #     delta_rho   =  np.cos(alpha) * v
-            #     delta_alpha = -np.sin(alpha)/rho*v + omega
-            #     delta_beta  =  np.sin(alpha)/rho*v
-
-            delta_rho   = -k_rho * rho * np.cos(alpha)
-            delta_alpha =  k_rho * np.sin(alpha) - k_alpha * alpha - k_beta * beta
-            delta_beta  = -k_rho * np.sin(alpha)
-
-            rho   += delta_rho
-            alpha += delta_alpha
-            beta  += delta_beta
-            print("x={:<6.4} y={:<6.4} theta={:<6.4} v={:<6.4} omega={:<6.4} rho={:<6.4} alpha={:<6.4} beta={:<6.4}".format(pose.x,pose.y, pose.theta, v, omega, rho, alpha, beta))
-
-        return x_plot, y_plot, theta_plot
-
     def move_to_pose(self, goal_pose, k_rho, k_beta, k_alpha):
         def to_polar(pose, goal_pose):
             rho = np.sqrt((pose.x - goal_pose.x)**2 + (pose.y - goal_pose.y)**2)
@@ -142,7 +88,7 @@ class DifferentialDriveRobot(object):
             beta  = -pose.theta - alpha
             return rho, alpha, beta
 
-        time_delta = .1
+        time_delta = .01
         x_plot = []
         y_plot = []
         theta_plot = []
@@ -167,7 +113,7 @@ class DifferentialDriveRobot(object):
             print("x={:<6.4} y={:<6.4} theta={:<6.4} distance={:<6.4} v={:<6.4} omega={:<6.4} rho={:<6.4} alpha={:<6.4} beta={:<6.4}".format(
                 self.pose.x,self.pose.y, self.pose.theta, distance, v, omega, rho, alpha, beta))
 
-            if rho < 0.01 or len(x_plot) > 100:
+            if rho < 0.01 or len(x_plot) > 1000:
                 break
 
             new_theta = self.pose.theta + time_delta * omega
@@ -179,7 +125,6 @@ class DifferentialDriveRobot(object):
             rho, alpha, beta = to_polar(self.pose, goal_pose)
 
         return x_plot, y_plot, theta_plot
-
 
 max_x = -np.inf
 max_y = -np.inf
@@ -215,7 +160,7 @@ def plot(x,y, start=None, goal=None, theta=None):
     else:
         rng = x_range
 
-    plt.scatter(x,y)
+    plt.scatter(x,y,s=2.0)
     ax.set_xlim(min_x - 20, min_x + rng + 20)
     ax.set_ylim(min_y - 20, min_y + rng + 20)
     ax.set_aspect('equal', 'datalim')
@@ -227,7 +172,8 @@ def plot(x,y, start=None, goal=None, theta=None):
         goal_arrow = Arrow(goal.x, goal.y, 10*np.cos(goal.theta), 10*np.sin(goal.theta), 2.0)
         ax.add_collection(PatchCollection([goal_arrow]))
     if theta:
-        ax.add_collection(PatchCollection([Arrow(x, y, 5*np.cos(theta), 3*np.sin(theta), 1.0) for x, y, theta in zip(x, y, theta)]))
+        arrows = [Arrow(x, y, np.cos(theta), np.sin(theta), 1.0) for x, y, theta in zip(x, y, theta)]
+        ax.add_collection(PatchCollection([arrows[i] for i in range(len(arrows)) if i in (0, len(arrows)-1) or not i%100]))
                               
 def do_move_to_point():
     x_g = 0.0
@@ -239,17 +185,16 @@ def do_move_to_point():
                          Pose(50,    0,  deg2rad(270)),
                          Pose(-50 * np.cos(np.pi/4), -50 * np.sin(np.pi/4), deg2rad(135)),
                          Pose(-50,   0,  deg2rad(180)),
+                         Pose(50, -50, deg2rad(0)),
                          ]:
         robot = DifferentialDriveRobot(pose=initial_pose)
         x,y, theta = robot.move_to_point(x_g, y_g)
         plot(x, y, initial_pose, Pose(x_g, y_g, theta[-1]))
 
-    plt.savefig('a3_move_to_point.png')
+    plt.savefig('a3_move_to_point.png', dpi=600)
     plt.show()
 
 def do_move_to_line():
-    # y = ax + c
-    # -ax + y - c = 0
     a = 1.0
     b = 1.0
     c = 0.0
@@ -258,25 +203,20 @@ def do_move_to_line():
     plt.scatter([i for i in range(50)], [a * i + c for i in range(50)])
 
     for initial_pose in [
-           # Pose(10.0, 10.0, deg2rad(180)),
-           # Pose(5.0, 10.0, deg2rad(180)),
-           # Pose(1.0, 5.0, deg2rad(180)),
-           # Pose(20.0, 20.0, deg2rad(90)),
-           # Pose(20.0, 30.0, deg2rad(90)),
-           # Pose(20.0, 40.0, deg2rad(270)),
-            Pose(10.0, 43.0, deg2rad(180)),
+            Pose(10.0, 10.0, deg2rad(180)),
+            Pose(5.0, 10.0, deg2rad(180)),
+            Pose(1.0, 5.0, deg2rad(180)),
+            Pose(20.0, 20.0, deg2rad(90)),
+            Pose(20.0, 30.0, deg2rad(90)),
+            Pose(20.0, 40.0, deg2rad(270)),
             Pose(10.0, 40.0, deg2rad(180)),
-           # Pose(10.0, 5.0, deg2rad(0)),
-           # Pose(6.0, 3.0, deg2rad(0)),
-           # Pose(30.0, 10.0, deg2rad(180)),
-           # Pose(20.0, 10.0, deg2rad(45)),
-           # Pose(2.0, 7.0, deg2rad(0)),
+            Pose(30.0, 10.0, deg2rad(180)),
             ]:
         robot = DifferentialDriveRobot(pose=initial_pose)
         x,y, theta = robot.move_to_line(l, 1.0, 0.1, 1.0)
         plot(x, y, initial_pose, Pose(x[-1], y[-1], theta[-1]))
 
-    plt.savefig('a3_move_line.png')
+    plt.savefig('a3_move_line.png', dpi=600)
     plt.show()
 
 def do_move_to_pose():
@@ -285,23 +225,27 @@ def do_move_to_pose():
     k_a = 8
     k_b = -3
     for x,y,theta in [
-                    # (15.0,  5.0, deg2rad(0.0)),
+                     (15.0,  5.0, deg2rad(0.0)),
                      (50.0,  5.0, deg2rad(0.0)),
-                    # (10.0,  30.0, deg2rad(180.0)),
+                     (10.0,  30.0, deg2rad(180.0)),
             ]:
         initial_pose = Pose(x,y,theta)
         robot = DifferentialDriveRobot(pose=initial_pose)
         x,y, theta = robot.move_to_pose(goal_pose, k_r, k_b, k_a)
         plot(x, y, theta=theta)
 
-
-    plt.savefig('a3_move_to_pose.png')
+    plt.savefig('a3_move_to_pose.png', dpi=600)
     plt.show()
 
 
 def main():
-    do_move_to_pose()
-
+    function = sys.argv[1]
+    {
+        'point': do_move_to_point,
+        'line': do_move_to_line,
+        'pose': do_move_to_pose,
+    }[function]()
+        
 if __name__=="__main__":
     main()
     
