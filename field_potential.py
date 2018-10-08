@@ -25,22 +25,20 @@ def main():
 
     max_arrow = length(100.0, 100.0)
     
-    # make array of x locations to hold vectors
-    # x     = np.zeros(100*100, dtype=np.float).reshape((100,100))
+    # numpy arrays with indexes, since they match the robot operational space
     x_ind = np.zeros(100*100, dtype=np.float).reshape((100,100))
-    # make array of y locations to hold vectors
-    # y     = np.zeros(100*100, dtype=np.float).reshape((100,100))
     y_ind = np.zeros(100*100, dtype=np.float).reshape((100,100))
 
-    # assign attraction values
     for i in range(100):
         for j in range(100):
             x_ind[i][j] = i
             y_ind[i][j] = j
     
+    # Set up attraction values for goals
     x = x_ind - goal.x
     y = y_ind - goal.y
 
+    # Add repulsion values for obstacles.
     for obstacle in obstacles:
         distance  = np.sqrt(np.power(x_ind - obstacle[0], 2) + np.power(y_ind - obstacle[1], 2))
         x_direction = np.sign(obstacle[0] - x_ind)
@@ -82,7 +80,7 @@ def main():
     arrows = []
     for i in range(100):
         for j in range(100):
-            arrows.append(Arrow(i + offsets[i][j], j + offsets[i][j], dx[i][j], dy[i][j], vector_lengths[i][j], width=.00001))
+            arrows.append(Arrow(i + offsets[i][j], j + offsets[i][j], dx[i][j], dy[i][j], vector_lengths[i][j]))
     ax.add_collection(PatchCollection(arrows))
     ax.set_aspect('equal', 'datalim')
     # ax.quiver(x_ind, y_ind, dx, dy, scale=100)

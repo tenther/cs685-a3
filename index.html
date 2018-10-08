@@ -1,0 +1,72 @@
+<html>
+<body>
+<h1>CS685 Assignment 3</h1>
+<h2>Paul McKerley (G00616949)</h2>
+<h2>September 30, 2018</h2>
+<h3>Part 1</h3>
+<p>
+All the code for the first question is in <a href="move_robot.py">this
+file.</a> The three functions do_move_to_point, do_move_to_line, and
+do_move_to_pose implement the assignment. I had a lot of trouble
+getting these to run. Partly it was a matter of finding correct
+constants. I ended up renting the Corke book mentioned in the notes
+and used the same constants, which generally worked (except for
+move_to_pose.) Here are details about each function.
+</p>
+<h4>Move to point</h4>
+<p>This image shows several robots starting off in different poses and
+moving to (0,0).  Their are arrows on the image to show the starting
+and ending orientation of each robot.
+</p>
+<img src="a3_move_to_point.png" width="1000" width="1000"/>
+<h4>Move to line</h4>
+<p>This image show several robots starting in various places and
+  moving to the line [1,1,0]. The thick
+  dark dots show the line the robots are moving toward. The smaller
+  dots show the robot paths.Their are arrows on the image to show the
+  starting and ending orientation of each robot.
+</p>
+ <img src="a3_move_line.png" width="1000" width="1000"/> 
+<h4>Move to pose</h4>
+<p>
+I had the most trouble with the move_to_pose function. I never did
+actually get it to work properly. The pose doesn't change correctly. The first image shows the paths of
+three robots moving to [20, 20, 90]. The second image shows the detail of the end position of the robots, they
+are all oriented to 0 degrees, not 90. The images show multiple orientations along each line to
+show the robots changing orientation (incorrectly, unfortunately.)
+</p>
+ <img src="a3_move_to_pose.png" width="1000" width="1000"/> 
+ <img src="a3_move_to_pose_detail_1.png" width="1000" width="1000"/> 
+<h3>Part 2</h3>
+<p>The code for this section is in <a href="field_potential.py">this
+file.</a>  I chose make the distance from the obstacle at which point
+the repulsion becomes 0 to be 5 m. The first image shows the potential
+field with four robots starting at different places and making the way
+to the goal. The attraction fields are represented by vector arrows
+in each 1x1 box. It's a little hard to make out the vectors, but you
+can make them out clearly in the details images.
+</p>
+ <img src="a3_field_potential.png" width="1000" width="1000"/> 
+
+<p>The first detail image show the track of the four robots meeting at
+  the first obstacle and and working around it. It's a little
+  hard to make out the robots. They are the small colored dots. Zooming
+  in on the image in matplotlib make the field potential vectors clearer
+  and the robot traces more obscure.</p>
+ <img src="a3_field_potential_detail_1.png" width="1000" width="1000"/> 
+
+<p>The second detail image show the goal with all robots arriving in
+  roughly the same place. They don't meet in exactly the same place
+  because the program stops with the robot is with 0.1 m of the goal.
+  The vector at this point are less distinct because their intensity
+  is proportional to the distance from the goal.
+</p>
+<img src="a3_field_potential_detail_2.png" width="1000" width="1000"/> 
+<p>The third show the how two robots working around the southern edge
+  of the second obstacle. You can see how there motion is jerky as the
+  robot move from a potential field where the repulsion is zero, to
+  where it is strong within 5 m of the edge of the obstacle.
+  <img src="a3_field_potential_detail_3.png" width="1000"
+  width="1000"/>
+</body>
+</html>
